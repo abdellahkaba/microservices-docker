@@ -1,0 +1,78 @@
+services:
+  micro-discovery-service:
+    build: ./discovery-service
+    container_name: micro-discovery-service
+    ports:
+      - '8761:8761'
+    expose:
+      - '8761'
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost:8761/actuator/health"]
+      interval: 10s
+      retries: 4
+  micro-config-service:
+    build: ./config-service
+    container_name: micro-config-service
+    ports:
+      - '9999:9999'
+    expose:
+      - '9999'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://micro-discovery-service:8761/eureka
+    healthcheck:
+      test: [ "CMD","curl","-f","http://localhost:9999/actuator/health"]
+      interval: 10s
+      retries: 4
+    depends_on:
+      micro-discovery-service:
+        condition: service_healthy
+  micro-customer-service:
+    build: ./customer-service
+    container_name: micro-customer-service
+    ports:
+      - '8383:8383'
+    expose:
+      - '8383'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://micro-discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://micro-config-service:9999
+    healthcheck:
+      test: [ "CMD","curl","-f","http://localhost:8383/actuator/health" ]
+      interval: 10s
+      retries: 4
+    depends_on:
+      micro-config-service:
+        condition: service_healthy
+  micro-account-service:
+    build: ./account-service
+    container_name: micro-account-service
+    ports:
+      - '8081:8081'
+    expose:
+      - '8081'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://micro-discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://micro-config-service:9999
+    depends_on:
+      micro-customer-service:
+        condition: service_healthy
+  micro-gateway-service:
+    build: ./gateway-service
+    container_name: micro-gateway-service
+    ports:
+      - '8888:8888'
+    expose:
+      - '8888'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://micro-discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://micro-config-service:9999
+    depends_on:
+      micro-config-service:
+        condition: service_healthy
+  micro-frontend-service:
+    build: ./microserivce-frontend
+    container_name: micro-frontend-service
+    ports:
+      - '81:81'
+    expose:
+      - '81'
